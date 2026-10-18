@@ -4,3 +4,15 @@ defense/ONTL/*
 defense/pcaps/*
 defense/cicflowmeter/*
 defense/output/botnet_predictions.csv
+/pcaps/*.parquet
+attack/pacaps/*
+# Generated prediction outputs
+output/botnet_predictions.csv
+defense/output/*predictions.csv
+defense/flows/*.csv
+attack/flows/*.csv
+
+# Runtime output
+defense/logs/*
+defense/alerts/*
+defense/pcaps/*
