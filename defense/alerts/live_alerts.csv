@@ -1,0 +1,3 @@
+src_ip,dst_ip,src_port,dst_port,protocol,timestamp,predicted_class,predicted_label,attack_probability
+10.10.0.205,10.10.0.117,44934,9998,17,2026-10-18 06:37:13,1,Malicious,0.6138921
+10.10.0.205,10.10.0.117,33327,9998,17,2026-10-18 06:46:13,1,Malicious,0.6737929
