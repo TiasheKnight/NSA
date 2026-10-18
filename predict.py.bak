@@ -1,0 +1,139 @@
+
+#!/usr/bin/env python3
+
+import argparse
+import sys
+from pathlib import Path
+
+import joblib
+import pandas as pd
+
+
+def load_dataset(path):
+    path = Path(path)
+
+    if not path.is_file():
+        raise FileNotFoundError(f"Input file not found: {path}")
+
+    if path.suffix.lower() == ".csv":
+        return pd.read_csv(path, low_memory=False)
+    elif path.suffix.lower() in (".parquet", ".pq"):
+        return pd.read_parquet(path)
+
+    raise ValueError("Input must be a .csv, .parquet, or .pq file")
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        description="Predict benign/malicious traffic using a trained IDS model."
+    )
+    parser.add_argument("--model", required=True, help="Path to saved model (.joblib or .pkl)")
+    parser.add_argument("--input", required=True, help="Input flow dataset (.csv or .parquet)")
+    parser.add_argument("--output", default="predictions.csv", help="Output CSV path")
+    parser.add_argument(
+        "--label-column",
+        default=None,
+        help="Optional ground-truth label column to exclude from features",
+    )
+    parser.add_argument(
+        "--features-file",
+        default=None,
+        help="Optional text file containing one feature column name per line",
+    )
+    args = parser.parse_args()
+
+    try:
+        # Load model and input data.
+        model = joblib.load(args.model)
+        df = load_dataset(args.input)
+
+        if df.empty:
+            raise ValueError("The input dataset contains no rows.")
+
+        print(f"Loaded dataset: {df.shape[0]} rows, {df.shape[1]} columns")
+
+        # Determine the exact features used by the trained model.
+        if args.features_file:
+            with open(args.features_file, encoding="utf-8") as f:
+                features = [
+                    line.strip()
+                    for line in f
+                    if line.strip() and not line.strip().startswith("#")
+                ]
+        elif hasattr(model, "feature_names_in_"):
+            features = list(model.feature_names_in_)
+        else:
+            raise ValueError(
+                "The model does not store feature names. Supply --features-file "
+                "with the training feature names, one per line."
+            )
+
+        missing = [col for col in features if col not in df.columns]
+        if missing:
+            raise ValueError(
+                f"Missing {len(missing)} required feature(s): "
+                + ", ".join(missing[:20])
+            )
+
+        # Extra dataset columns, including the ground-truth label, are ignored.
+        X = df[features].copy()
+
+        # CICFlowMeter data should normally be numeric. Convert numeric-looking
+        # strings, and fail clearly if non-numeric values remain.
+        for col in X.columns:
+            X[col] = pd.to_numeric(X[col], errors="coerce")
+
+        if X.isna().any().any():
+            bad_cols = X.columns[X.isna().any()].tolist()
+            raise ValueError(
+                "Missing or non-numeric values found in feature columns: "
+                + ", ".join(bad_cols[:20])
+                + ". Apply the same cleaning/imputation used during training."
+            )
+
+        # Use the trained model/pipeline to predict.
+        predictions = model.predict(X)
+
+        result = pd.DataFrame({"predicted_label": predictions})
+
+        # Add confidence when the model supports probability estimates.
+        if hasattr(model, "predict_proba"):
+            probabilities = model.predict_proba(X)
+            classes = list(model.classes_)
+
+            result["confidence"] = probabilities.max(axis=1)
+
+            # Add a malicious probability if the model's class labels
+            # explicitly identify the malicious class.
+            for i, label in enumerate(classes):
+                if str(label).strip().lower() in {
+                    "malicious", "attack", "anomaly", "1"
+                }:
+                    result["malicious_probability"] = probabilities[:, i]
+                    break
+
+        # Preserve original rows and columns in the output.
+        output = df.copy()
+        output["predicted_label"] = result["predicted_label"].values
+
+        if "confidence" in result:
+            output["confidence"] = result["confidence"].values
+
+        if "malicious_probability" in result:
+            output["malicious_probability"] = (
+                result["malicious_probability"].values
+            )
+
+        output.to_csv(args.output, index=False)
+
+        print("\nPrediction counts:")
+        print(result["predicted_label"].value_counts(dropna=False).to_string())
+        print(f"\nSaved predictions to: {args.output}")
+
+    except Exception as exc:
+        print(f"ERROR: {exc}", file=sys.stderr)
+        sys.exit(1)
+
+
+if __name__ == "__main__":
+    main()
