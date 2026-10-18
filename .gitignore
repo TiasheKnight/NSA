@@ -1,6 +1,6 @@
-archive.zip
-./archive/*
-./ONTL/*
-pcaps/*
-cicflowmeter/*
-output/botnet_predictions.csv
+defense/archive.zip
+defense/archive/*
+defense/ONTL/*
+defense/pcaps/*
+defense/cicflowmeter/*
+defense/output/botnet_predictions.csv
