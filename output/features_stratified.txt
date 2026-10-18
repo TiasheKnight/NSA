@@ -1,0 +1,29 @@
+Flow Duration
+Fwd Pkt Len Max
+Fwd Pkt Len Min
+Fwd Pkt Len Mean
+Fwd Pkt Len Std
+Bwd Pkt Len Max
+Bwd Pkt Len Min
+Bwd Pkt Len Mean
+Bwd Pkt Len Std
+Flow IAT Mean
+Flow IAT Std
+Flow IAT Max
+Flow IAT Min
+Fwd IAT Tot
+Fwd IAT Mean
+Fwd IAT Std
+Fwd IAT Max
+Fwd IAT Min
+Bwd IAT Tot
+Bwd IAT Mean
+Bwd IAT Std
+Bwd IAT Max
+Bwd IAT Min
+Pkt Len Mean
+Pkt Len Std
+Pkt Len Var
+FIN Flag Cnt
+SYN Flag Cnt
+PSH Flag Cnt
